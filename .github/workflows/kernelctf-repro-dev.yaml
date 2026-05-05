@@ -135,11 +135,20 @@ jobs:
         if: startsWith(matrix.target, 'android')
         run: bash ../../kernelctf/server/get_android_dependencies.sh --exploit-build-only
 
+      - name: Install Linux build and repro dependencies
+        if: startsWith(matrix.target, 'android') == false
+        run: |
+          packages=(libkeyutils-dev qemu-system-x86 inotify-tools expect)
+          if ! command -v jq >/dev/null 2>&1; then
+            packages+=(jq)
+          fi
+
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${packages[@]}"
+
       - name: Install kernelXDK
         if: startsWith(matrix.target, 'android') == false
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libkeyutils-dev
           wget https://github.com/google/kernel-research/releases/download/libxdk%2Fv0.1/libxdk-v0.1.tar.gz
           tar -xzvf libxdk-v0.1.tar.gz
           chmod -R o+rx include lib
@@ -165,10 +174,6 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-
-      - name: Install Linux repro tools
-        if: startsWith(matrix.target, 'android') == false
-        run: sudo apt-get update && sudo apt-get install -y qemu-system-x86 inotify-tools expect jq
 
       - name: Fetch Linux repro images
         if: startsWith(matrix.target, 'android') == false
