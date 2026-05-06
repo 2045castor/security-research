@@ -137,11 +137,13 @@ jobs:
 
       - name: Install Linux build and repro dependencies
         if: startsWith(matrix.target, 'android') == false
+        timeout-minutes: 10
         run: |
           packages=(libkeyutils-dev qemu-system-x86 inotify-tools expect)
           if ! command -v jq >/dev/null 2>&1; then
             packages+=(jq)
           fi
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
 
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${packages[@]}"
