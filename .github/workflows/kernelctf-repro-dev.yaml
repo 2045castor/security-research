@@ -204,9 +204,10 @@ jobs:
           echo "APK_PATH=$(realpath ./apk/app-release.apk)" >> "$GITHUB_ENV"
           echo "ANDROID_RELEASE_PATH=$(realpath ./android_release)" >> "$GITHUB_ENV"
 
-      - name: Run reproduction attempts
+      - id: repro_attempts
+        name: Run reproduction attempts
         run: |
-          set +e
+          set -uo pipefail
 
           success_count=0
           run_markers=""
@@ -223,16 +224,32 @@ jobs:
 
           reliability=$((success_count * 100 / RUNS))
           {
+            echo "success_count=$success_count"
+            echo "reliability=$reliability"
+            echo "run_markers=$run_markers"
+          } >> "$GITHUB_OUTPUT"
+
+        shell: bash
+
+      - name: Publish reproduction summary
+        if: always()
+        run: |
+          {
             echo "# Reproduction summary"
             echo
             echo "Target: $RELEASE_ID"
             echo
-            echo "Reliability: ${reliability}%"
+            echo "Reliability: ${{ steps.repro_attempts.outputs.reliability }}%"
             echo
-            echo "Runs:${run_markers}"
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo "Runs:${{ steps.repro_attempts.outputs.run_markers }}"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash
 
-          if [[ "$success_count" -eq 0 ]]; then
+      - name: Fail job if reproduction never succeeded
+        if: always()
+        run: |
+          if [[ "${{ steps.repro_attempts.outputs.success_count }}" -eq 0 ]]; then
+            echo "Reproduction failed in all $RUNS attempts." >&2
             exit 1
           fi
         shell: bash
