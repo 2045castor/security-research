@@ -180,13 +180,13 @@ jobs:
       - name: Fetch Linux repro images
         if: startsWith(matrix.target, 'android') == false
         run: |
-          wget -O rootfs.img.gz https://storage.googleapis.com/kernelctf-build/files/rootfs_repro_v2.img.gz
+          wget -q -O rootfs.img.gz https://storage.googleapis.com/kernelctf-build/files/rootfs_repro_v2.img.gz
           gzip -d rootfs.img.gz
           download_release_id="$RELEASE_ID"
           if [[ "$download_release_id" == "mitigation-6.1" ]]; then
             download_release_id="mitigation-6.1-v2"
           fi
-          wget https://storage.googleapis.com/kernelctf-build/releases/$download_release_id/bzImage
+          wget -q  https://storage.googleapis.com/kernelctf-build/releases/$download_release_id/bzImage
 
       - name: Load Android kernel modules
         if: startsWith(matrix.target, 'android')
