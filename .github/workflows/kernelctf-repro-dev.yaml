@@ -211,15 +211,28 @@ jobs:
 
           success_count=0
           run_markers=""
+          attempts_report="attempts_report.tsv"
+          : > "$attempts_report"
 
           for attempt in $(seq 1 "$RUNS"); do
             echo "Starting reproduction $attempt / $RUNS"
+            start_time=$(date +%s)
             if ./repro.sh "$attempt"; then
+              attempt_status="success"
               success_count=$((success_count + 1))
               run_markers="$run_markers ✅"
             else
+              attempt_status="failed"
               run_markers="$run_markers ❌"
             fi
+
+            end_time=$(date +%s)
+            duration=$((end_time - start_time))
+            warning_present="no"
+            if [[ -f "repro_log_$attempt.txt" ]] && grep -Fq "[WARNING] kernel image offset > 4GB, nperm may fail" "repro_log_$attempt.txt"; then
+              warning_present="yes"
+            fi
+            printf '%s\t%s\t%s\t%s\n' "$attempt" "$attempt_status" "$duration" "$warning_present" >> "$attempts_report"
           done
 
           reliability=$((success_count * 100 / RUNS))
@@ -234,6 +247,14 @@ jobs:
       - name: Publish reproduction summary
         if: always()
         run: |
+          cpu_info_source=""
+          for attempt in $(seq 1 "$RUNS"); do
+            if [[ -f "repro_log_$attempt.txt" ]]; then
+              cpu_info_source="repro_log_$attempt.txt"
+              break
+            fi
+          done
+
           {
             echo "# Reproduction summary"
             echo
@@ -242,6 +263,27 @@ jobs:
             echo "Reliability: ${{ steps.repro_attempts.outputs.reliability }}%"
             echo
             echo "Runs:${{ steps.repro_attempts.outputs.run_markers }}"
+            echo
+
+            if [[ -n "$cpu_info_source" ]]; then
+              for pattern in \
+                "Vendor:" \
+                "Model:" \
+                "Family:" \
+                "Model ID:" \
+                "Stepping:" \
+                "meltdown:"; do
+                grep -m1 "^$pattern" "$cpu_info_source" || true
+              done
+              echo
+            fi
+
+            if [[ -f attempts_report.tsv ]]; then
+              echo "Per-run details:"
+              while IFS=$'\t' read -r attempt status duration warning_present; do
+                echo "- Run $attempt: ${duration}s, status=$status, warning_present=$warning_present"
+              done < attempts_report.tsv
+            fi
           } | tee -a "$GITHUB_STEP_SUMMARY"
         shell: bash
 
