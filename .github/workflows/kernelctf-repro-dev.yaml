@@ -217,7 +217,7 @@ jobs:
           for attempt in $(seq 1 "$RUNS"); do
             echo "Starting reproduction $attempt / $RUNS"
             start_time=$(date +%s)
-            if ./repro.sh "$attempt"; then
+            if timeout 300s ./repro.sh "$attempt"; then
               attempt_status="success"
               success_count=$((success_count + 1))
               run_markers="$run_markers ✅"
@@ -277,11 +277,12 @@ jobs:
                 "Model ID:" \
                 "Stepping:" \
                 "meltdown:"; do
-                line=$(grep -m1 "^$pattern" "$cpu_info_source" || true)
+                line=$(grep -m1 "^$pattern" "$cpu_info_source" | tr -d '\r' || true)
                 if [[ -n "$line" ]]; then
                   key=${line%%:*}
                   value=${line#*:}
                   value=${value# }
+                  value=$(printf '%s' "$value" | sed 's/[[:space:]]*$//; s/|/\\\\|/g')
                   echo "| $key | $value |"
                 fi
               done
