@@ -266,6 +266,10 @@ jobs:
             echo
 
             if [[ -n "$cpu_info_source" ]]; then
+              echo "## CPU"
+              echo
+              echo "| Field | Value |"
+              echo "| --- | --- |"
               for pattern in \
                 "Vendor:" \
                 "Model:" \
@@ -273,19 +277,69 @@ jobs:
                 "Model ID:" \
                 "Stepping:" \
                 "meltdown:"; do
-                grep -m1 "^$pattern" "$cpu_info_source" || true
+                line=$(grep -m1 "^$pattern" "$cpu_info_source" || true)
+                if [[ -n "$line" ]]; then
+                  key=${line%%:*}
+                  value=${line#*:}
+                  value=${value# }
+                  echo "| $key | $value |"
+                fi
               done
               echo
             fi
 
             if [[ -f attempts_report.tsv ]]; then
-              echo "Per-run details:"
+              echo "## Per-run details"
+              echo
+              echo "| Run | Duration | Status | Warning |"
+              echo "| --- | --- | --- | --- |"
               while IFS=$'\t' read -r attempt status duration warning_present; do
-                echo "- Run $attempt: ${duration}s, status=$status, warning_present=$warning_present"
+                echo "| $attempt | ${duration}s | $status | $warning_present |"
               done < attempts_report.tsv
             fi
           } | tee -a "$GITHUB_STEP_SUMMARY"
         shell: bash
+
+      - id: failed_logs
+        name: Collect failed repro logs
+        if: always()
+        run: |
+          failed_logs_dir="failed_repro_logs"
+          rm -rf "$failed_logs_dir"
+          mkdir -p "$failed_logs_dir"
+
+          failed_count=0
+          if [[ -f attempts_report.tsv ]]; then
+            while IFS=$'\t' read -r attempt status duration warning_present; do
+              if [[ "$status" != "failed" ]]; then
+                continue
+              fi
+
+              if [[ -f "repro_log_$attempt.txt" ]]; then
+                cp "repro_log_$attempt.txt" "$failed_logs_dir/"
+                failed_count=$((failed_count + 1))
+              fi
+            done < attempts_report.tsv
+          fi
+
+          {
+            echo "failed_count=$failed_count"
+            if [[ "$failed_count" -gt 0 ]]; then
+              echo "has_failed_logs=true"
+            else
+              echo "has_failed_logs=false"
+            fi
+          } >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Upload failed repro logs artifact
+        if: always() && steps.failed_logs.outputs.has_failed_logs == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: failed_repro_logs_${{ env.RELEASE_ID }}
+          path: |
+            kernelctf/repro/failed_repro_logs/
+          if-no-files-found: error
 
       - name: Fail job if reproduction never succeeded
         if: always()
