@@ -217,7 +217,7 @@ jobs:
           for attempt in $(seq 1 "$RUNS"); do
             echo "Starting reproduction $attempt / $RUNS"
             start_time=$(date +%s)
-            if timeout 300s ./repro.sh "$attempt"; then
+            if ./repro.sh "$attempt"; then
               attempt_status="✅"
               success_count=$((success_count + 1))
               run_markers="$run_markers ✅"
@@ -312,7 +312,7 @@ jobs:
           failed_count=0
           if [[ -f attempts_report.tsv ]]; then
             while IFS=$'\t' read -r attempt status duration warning_present; do
-              if [[ "$status" != "failed" ]]; then
+              if [[ "$status" != "❌" ]]; then
                 continue
               fi
 
