@@ -205,7 +205,7 @@ else
     
     echo $CMDLINE
     
-    expect -c '
+    timeout 300s expect -c '
         set timeout -1
         set stty_init raw
         spawn qemu-system-x86_64 -m 3.5G -nographic \
@@ -226,12 +226,12 @@ else
         expect "# "
         send "exit\n"
         expect eof
-    ' | tee repro_log_$TRY_ID.txt | sed $'s/\r//' &
+    ' | tee $QEMU_TXT | sed $'s/\r//' &
     QEMU_PID="$!"
     
     while true; do
         # check if qemu.txt modified within $STDOUT_TIMEOUT seconds
-        inotifywait -qq -t $STDOUT_TIMEOUT -e modify repro_log_$TRY_ID.txt &
+        inotifywait -qq -t $STDOUT_TIMEOUT -e modify $QEMU_TXT &
         # wait for either QEMU or inotifywait to exit
         if ! wait -n $QEMU_PID $!; then break; fi
         # exit loop if QEMU exited already
@@ -247,11 +247,11 @@ else
     fi
     
     echo "::$STOP_MARKER::"
-    # cp $QEMU_TXT repro_log_$TRY_ID.txt
+    cp $QEMU_TXT repro_log_$TRY_ID.txt
     # echo "QEMU_OUTPUT_B64=$(cat $QEMU_TXT|base64 -w0)" >> "$GITHUB_OUTPUT"
     echo "RUN_TIME=$(expr $(date +%s) - $START_TIME)" >> "$GITHUB_OUTPUT"
     
-    if grep -q $FLAG repro_log_$TRY_ID.txt; then
+    if grep -q $FLAG $QEMU_TXT; then
         echo "Got the flag! Congrats!"
         exit 0
     else
