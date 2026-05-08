@@ -226,12 +226,12 @@ else
         expect "# "
         send "exit\n"
         expect eof
-    ' | tee $QEMU_TXT | sed $'s/\r//' &
+    ' | tee repro_log_$TRY_ID.txt | sed $'s/\r//' &
     QEMU_PID="$!"
     
     while true; do
         # check if qemu.txt modified within $STDOUT_TIMEOUT seconds
-        inotifywait -qq -t $STDOUT_TIMEOUT -e modify $QEMU_TXT &
+        inotifywait -qq -t $STDOUT_TIMEOUT -e modify repro_log_$TRY_ID.txt &
         # wait for either QEMU or inotifywait to exit
         if ! wait -n $QEMU_PID $!; then break; fi
         # exit loop if QEMU exited already
@@ -247,7 +247,7 @@ else
     fi
     
     echo "::$STOP_MARKER::"
-    cp $QEMU_TXT repro_log_$TRY_ID.txt
+    # cp $QEMU_TXT repro_log_$TRY_ID.txt
     # echo "QEMU_OUTPUT_B64=$(cat $QEMU_TXT|base64 -w0)" >> "$GITHUB_OUTPUT"
     echo "RUN_TIME=$(expr $(date +%s) - $START_TIME)" >> "$GITHUB_OUTPUT"
     
