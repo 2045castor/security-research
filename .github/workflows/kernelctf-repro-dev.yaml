@@ -218,19 +218,19 @@ jobs:
             echo "Starting reproduction $attempt / $RUNS"
             start_time=$(date +%s)
             if timeout 300s ./repro.sh "$attempt"; then
-              attempt_status="success"
+              attempt_status="✅"
               success_count=$((success_count + 1))
               run_markers="$run_markers ✅"
             else
-              attempt_status="failed"
+              attempt_status="❌"
               run_markers="$run_markers ❌"
             fi
 
             end_time=$(date +%s)
             duration=$((end_time - start_time))
-            warning_present="no"
-            if [[ -f "repro_log_$attempt.txt" ]] && grep -Fq "[WARNING] kernel image offset > 4GB, nperm may fail" "repro_log_$attempt.txt"; then
-              warning_present="yes"
+            warning_present=""
+            if [[ -f "repro_log_$attempt.txt" ]] && grep -Fq "[WARNING] kernel image offset > 4GB" "repro_log_$attempt.txt"; then
+              warning_present="✅"
             fi
             printf '%s\t%s\t%s\t%s\n' "$attempt" "$attempt_status" "$duration" "$warning_present" >> "$attempts_report"
           done
