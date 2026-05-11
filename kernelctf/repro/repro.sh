@@ -205,7 +205,7 @@ else
     
     echo $CMDLINE
     
-    expect -c '
+    timeout 300s expect -c '
         set timeout -1
         set stty_init raw
         spawn qemu-system-x86_64 -m 3.5G -nographic \
