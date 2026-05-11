@@ -20,6 +20,16 @@ on:
         type: boolean
         required: false
         default: false
+      skipVulnVerify:
+        description: 'Skip vulnerability verification'
+        type: boolean
+        required: false
+        default: false
+      skipArtifactBackup:
+        description: 'Skip uploading artifacts to Google Cloud Storage'
+        type: boolean
+        required: false
+        default: false
 permissions: {}
 jobs:
   structure_check:
@@ -373,6 +383,7 @@ jobs:
   vuln_verify:
     runs-on: ubuntu-latest
     needs: structure_check
+    if: always() && needs.structure_check.result == 'success' && !inputs.skipVulnVerify
     permissions: {}
     env:
       POC_FOLDER: pocs/linux/kernelctf/${{ needs.structure_check.outputs.submission_dir }}
@@ -449,7 +460,7 @@ jobs:
   backup_artifacts:
     runs-on: ubuntu-latest
     needs: [structure_check, exploit_build, exploit_build_debug, exploit_repro, vuln_verify]
-    if: always() && needs.structure_check.result == 'success'
+    if: always() && needs.structure_check.result == 'success' && !inputs.skipArtifactBackup
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v7
