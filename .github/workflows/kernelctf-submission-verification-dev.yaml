@@ -6,15 +6,17 @@ on:
         description: Submission directory under pocs/linux/kernelctf
         type: string
         required: true
+        default: CVE-2026-43074_lts
       submissionRef:
         description: Ref containing the submitted content; leave empty to use the workflow ref
         type: string
         required: false
+        default: submit
       baseRef:
         description: Base ref to compare against
         type: string
         required: false
-        default: master
+        default: original
       skipRepro:
         description: 'Skip reproduction'
         type: boolean
